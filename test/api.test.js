@@ -113,16 +113,30 @@ test('stages run paper printing → fusing → rolling → dispatch → dispatch
   await send('PATCH', `/api/jobs/${job.id}/quantities`, { qty_required: 10, qty_received: 10 });
 
   const seen = [];
-  for (let i = 0; i < 4; i++) {
-    const { res, body } = await send('POST', `/api/jobs/${job.id}/advance`);
+  for (const qty of [10, 9, 9, 8]) {
+    const { res, body } = await send('POST', `/api/jobs/${job.id}/advance`, { qty });
     assert.equal(res.status, 200);
     seen.push(body.stage);
   }
   assert.deepEqual(seen, ['fusing', 'rolling', 'dispatch', 'completed']);
-  assert.equal((await send('POST', `/api/jobs/${job.id}/advance`)).res.status, 409);
+  assert.equal((await send('POST', `/api/jobs/${job.id}/advance`, { qty: 1 })).res.status, 409);
 
   const detail = await (await fetch(`${base}/api/jobs/${job.id}`)).json();
-  assert.equal(detail.history.at(-1).message, 'Dispatch done — moved to Dispatched');
+  assert.deepEqual(detail.stage_qty, { printing: 10, fusing: 9, rolling: 9, dispatch: 8 });
+  assert.equal(detail.history.at(-1).message, 'Dispatch done, qty 8 — moved to Dispatched');
+});
+
+test('a stage cannot be marked done without a qty', async () => {
+  const { body: job } = await upload();
+  await send('PATCH', `/api/jobs/${job.id}/quantities`, { qty_required: 10, qty_received: 10 });
+
+  for (const body of [{}, { qty: '' }, { qty: 0 }, { qty: -3 }, { qty: 1.5 }]) {
+    const r = await send('POST', `/api/jobs/${job.id}/advance`, body);
+    assert.equal(r.res.status, 400, JSON.stringify(body));
+  }
+  const detail = await (await fetch(`${base}/api/jobs/${job.id}`)).json();
+  assert.equal(detail.stage, 'printing');
+  assert.deepEqual(detail.stage_qty, {});
 });
 
 test('deleting a job removes it', async () => {

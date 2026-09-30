@@ -115,12 +115,28 @@ function receivingCard(job) {
     </form>`;
 }
 
+// Qty done at each stage the job has already passed, e.g. "Paper Printing 100 · Fusing 98".
+function stageQtySummary(job) {
+  const done = state.stages.filter((s) => job.stage_qty[s.key] !== undefined);
+  if (!done.length) return '';
+  return `<ul class="stage-qty">${done.map((s) => `<li><span>${esc(s.label)}</span><strong>${job.stage_qty[s.key]}</strong></li>`).join('')}</ul>`;
+}
+
+function stageForm(job, stage, next) {
+  return `
+    <form class="stage-form">
+      <label>Qty done at ${esc(stage.label)}
+        <input type="number" name="qty" min="1" step="1" required placeholder="Received: ${job.qty_received}">
+      </label>
+      <button type="submit" class="primary">Mark done → ${esc(next.label)}</button>
+    </form>`;
+}
+
 function stageCard(job, stage) {
   const next = state.stages[state.stages.findIndex((s) => s.key === stage.key) + 1];
   let body = '';
   if (stage.key === 'receiving') body = receivingCard(job);
-  else if (next) body = `<button class="primary" data-action="advance">Mark ${esc(stage.label)} done → ${esc(next.label)}</button>`;
-  else body = `<div class="muted">Qty ${job.qty_received} dispatched</div>`;
+  else body = stageQtySummary(job) + (next ? stageForm(job, stage, next) : '');
 
   return `
     <article class="card" data-id="${job.id}">
@@ -161,9 +177,26 @@ function renderBoard() {
       } catch (err) { toast(err.message, true); }
     });
   });
+
+  board.querySelectorAll('.stage-form').forEach((form) => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = form.closest('.card').dataset.id;
+      const submit = form.querySelector('button[type=submit]');
+      submit.disabled = true;
+      try {
+        const job = await api(`/api/jobs/${id}/advance`, jsonRequest('POST', { qty: form.qty.value }));
+        toast(`Moved to ${job.stage_label}`);
+        await refresh();
+      } catch (err) {
+        submit.disabled = false;
+        toast(err.message, true);
+      }
+    });
+  });
 }
 
-// Shared click handling for history / advance / delete buttons.
+// Shared click handling for history / delete buttons.
 document.addEventListener('click', async (e) => {
   const btn = e.target.closest('button[data-action]');
   if (!btn) return;
@@ -177,11 +210,6 @@ document.addEventListener('click', async (e) => {
       $('#history-list').innerHTML = job.history
         .map((h) => `<li>${esc(h.message)}<time>${esc(formatTime(h.created_at))}</time></li>`).join('');
       $('#history-dialog').showModal();
-    } else if (btn.dataset.action === 'advance') {
-      btn.disabled = true;
-      const job = await api(`/api/jobs/${id}/advance`, jsonRequest('POST', {}));
-      toast(`Moved to ${job.stage_label}`);
-      await refresh();
     } else if (btn.dataset.action === 'delete') {
       if (!confirm('Delete this job and its PDF?')) return;
       await api(`/api/jobs/${id}`, { method: 'DELETE' });

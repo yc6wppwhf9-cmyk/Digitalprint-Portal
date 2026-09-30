@@ -26,6 +26,14 @@ export function openDb(file) {
       message    TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    -- Qty completed at each production stage, entered when the stage is marked done.
+    CREATE TABLE IF NOT EXISTS stage_qty (
+      job_id     INTEGER NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+      stage      TEXT NOT NULL,
+      qty        INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (job_id, stage)
+    );
     -- Paper Cutting was removed from the flow; jobs already there continue at Paper Printing.
     UPDATE jobs SET stage = 'printing' WHERE stage = 'cutting';
   `);

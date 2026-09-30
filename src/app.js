@@ -42,6 +42,8 @@ export function createApp({ dataDir, uploadDir, publicDir }) {
   const getJob = db.prepare('SELECT * FROM jobs WHERE id = ?');
   const getHistory = db.prepare('SELECT stage, message, created_at FROM job_history WHERE job_id = ? ORDER BY id');
   const addHistory = db.prepare('INSERT INTO job_history (job_id, stage, message) VALUES (?, ?, ?)');
+  const getStageQty = db.prepare('SELECT stage, qty FROM stage_qty WHERE job_id = ?');
+  const addStageQty = db.prepare('INSERT OR REPLACE INTO stage_qty (job_id, stage, qty) VALUES (?, ?, ?)');
 
   function loadJob(id) {
     const job = getJob.get(Number(id));
@@ -55,6 +57,8 @@ export function createApp({ dataDir, uploadDir, publicDir }) {
       stage_label: stageLabel(job.stage),
       pdf_url: `/uploads/${job.pdf_file}`,
       qty_pending: Math.max(job.qty_required - job.qty_received, 0),
+      // e.g. { printing: 100, fusing: 98 } — qty done at each stage completed so far
+      stage_qty: Object.fromEntries(getStageQty.all(job.id).map((r) => [r.stage, r.qty])),
     };
     if (withHistory) out.history = getHistory.all(job.id);
     return out;
@@ -162,7 +166,7 @@ export function createApp({ dataDir, uploadDir, publicDir }) {
     res.json(present(loadJob(job.id), { withHistory: true }));
   });
 
-  // Production: mark the current stage done and move to the next one.
+  // Production: enter the qty done at the current stage, mark it done and move to the next one.
   app.post('/api/jobs/:id/advance', (req, res) => {
     const job = loadJob(req.params.id);
     if (job.stage === 'receiving') {
@@ -170,9 +174,12 @@ export function createApp({ dataDir, uploadDir, publicDir }) {
     }
     const next = nextStage(job.stage);
     if (!next) throw new HttpError(409, 'Job has already been dispatched');
+    const qty = parseQty(req.body?.qty, 'Qty');
+    if (!qty) throw new HttpError(400, `Enter the qty done at ${stageLabel(job.stage)} before marking it done`);
+    addStageQty.run(job.id, job.stage, qty);
     db.prepare("UPDATE jobs SET stage = ?, updated_at = datetime('now') WHERE id = ?").run(next, job.id);
     const note = String(req.body?.note ?? '').trim();
-    addHistory.run(job.id, next, `${stageLabel(job.stage)} done — moved to ${stageLabel(next)}${note ? ` (${note})` : ''}`);
+    addHistory.run(job.id, next, `${stageLabel(job.stage)} done, qty ${qty} — moved to ${stageLabel(next)}${note ? ` (${note})` : ''}`);
     res.json(present(loadJob(job.id), { withHistory: true }));
   });
 

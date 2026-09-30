@@ -8,8 +8,9 @@ Tracks a digital print job from the approved design PDF through production to di
 2. **Qty Receiving** – production sees the job and enters *Qty required*, *Qty available*
    and *Qty received* (or adds a delivery with *Received now (+)*).
    When qty received reaches qty required, the job moves to Paper Printing on its own.
-3. **Paper Printing → Fusing → Rolling → Dispatch** – each stage has a
-   "Mark … done" button that moves the job to the next stage.
+3. **Paper Printing → Fusing → Rolling → Dispatch** – at each stage enter the qty done
+   there and press "Mark done"; the job then moves to the next stage. The qty from every
+   completed stage stays visible on the job card.
 4. **Dispatched** – finished.
 
 Every change is recorded in the job's **History**.
