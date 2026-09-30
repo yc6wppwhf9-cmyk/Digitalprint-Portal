@@ -3,8 +3,7 @@
 // and only leaves it when the full required quantity has been received.
 export const STAGES = [
   { key: 'receiving', label: 'Qty Receiving' },
-  { key: 'cutting', label: 'Paper Cutting' },
-  { key: 'printing', label: 'Printing' },
+  { key: 'printing', label: 'Paper Printing' },
   { key: 'fusing', label: 'Fusing' },
   { key: 'rolling', label: 'Rolling' },
   { key: 'dispatch', label: 'Dispatch' },

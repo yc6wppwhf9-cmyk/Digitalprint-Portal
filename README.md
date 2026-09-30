@@ -7,8 +7,8 @@ Tracks a digital print job from the approved design PDF through production to di
 1. **Designer** uploads the print PDF and ticks **Approved** or **Pre-approved**.
 2. **Qty Receiving** – production sees the job and enters *Qty required*, *Qty available*
    and *Qty received* (or adds a delivery with *Received now (+)*).
-   When qty received reaches qty required, the job moves to Paper Cutting on its own.
-3. **Paper Cutting → Printing → Fusing → Rolling → Dispatch** – each stage has a
+   When qty received reaches qty required, the job moves to Paper Printing on its own.
+3. **Paper Printing → Fusing → Rolling → Dispatch** – each stage has a
    "Mark … done" button that moves the job to the next stage.
 4. **Dispatched** – finished.
 

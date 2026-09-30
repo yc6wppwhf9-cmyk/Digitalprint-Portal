@@ -74,7 +74,7 @@ test('designer can switch pre-approved to approved', async () => {
   assert.equal(body.approval_status, 'approved');
 });
 
-test('job stays in receiving until full qty is received, then goes to paper cutting', async () => {
+test('job stays in receiving until full qty is received, then goes to paper printing', async () => {
   const { body: job } = await upload();
 
   // cannot skip ahead before qty is received
@@ -90,7 +90,7 @@ test('job stays in receiving until full qty is received, then goes to paper cutt
 
   r = await send('PATCH', `/api/jobs/${job.id}/quantities`, { add_received: 10 });
   assert.equal(r.body.qty_received, 100);
-  assert.equal(r.body.stage, 'cutting');
+  assert.equal(r.body.stage, 'printing');
 
   // quantities are locked once the job has left receiving
   assert.equal((await send('PATCH', `/api/jobs/${job.id}/quantities`, { qty_received: 5 })).res.status, 409);
@@ -108,17 +108,17 @@ test('rejects negative or fractional quantities', async () => {
   assert.equal((await send('PATCH', `/api/jobs/${job.id}/quantities`, { qty_received: 2.5 })).res.status, 400);
 });
 
-test('stages run cutting → printing → fusing → rolling → dispatch → dispatched', async () => {
+test('stages run paper printing → fusing → rolling → dispatch → dispatched', async () => {
   const { body: job } = await upload();
   await send('PATCH', `/api/jobs/${job.id}/quantities`, { qty_required: 10, qty_received: 10 });
 
   const seen = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 4; i++) {
     const { res, body } = await send('POST', `/api/jobs/${job.id}/advance`);
     assert.equal(res.status, 200);
     seen.push(body.stage);
   }
-  assert.deepEqual(seen, ['printing', 'fusing', 'rolling', 'dispatch', 'completed']);
+  assert.deepEqual(seen, ['fusing', 'rolling', 'dispatch', 'completed']);
   assert.equal((await send('POST', `/api/jobs/${job.id}/advance`)).res.status, 409);
 
   const detail = await (await fetch(`${base}/api/jobs/${job.id}`)).json();

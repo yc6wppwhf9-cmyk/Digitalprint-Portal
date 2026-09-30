@@ -156,7 +156,7 @@ function renderBoard() {
       const data = Object.fromEntries(new FormData(form));
       try {
         const job = await api(`/api/jobs/${id}/quantities`, jsonRequest('PATCH', data));
-        toast(job.stage === 'cutting' ? 'Full qty received — moved to Paper Cutting' : 'Qty saved');
+        toast(job.stage !== 'receiving' ? `Full qty received — moved to ${job.stage_label}` : 'Qty saved');
         await refresh();
       } catch (err) { toast(err.message, true); }
     });

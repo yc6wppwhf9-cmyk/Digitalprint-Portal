@@ -26,6 +26,8 @@ export function openDb(file) {
       message    TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    -- Paper Cutting was removed from the flow; jobs already there continue at Paper Printing.
+    UPDATE jobs SET stage = 'printing' WHERE stage = 'cutting';
   `);
   return db;
 }

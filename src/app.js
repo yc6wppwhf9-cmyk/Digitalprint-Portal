@@ -130,7 +130,7 @@ export function createApp({ dataDir, uploadDir, publicDir }) {
   });
 
   // Production: record qty required / available / received.
-  // Once the full required qty is received the job moves on to Paper Cutting automatically.
+  // Once the full required qty is received the job moves on to Paper Printing automatically.
   app.patch('/api/jobs/:id/quantities', (req, res) => {
     const job = loadJob(req.params.id);
     if (job.stage !== 'receiving') throw new HttpError(409, 'Quantities can only be changed while the job is in Qty Receiving');
@@ -155,8 +155,9 @@ export function createApp({ dataDir, uploadDir, publicDir }) {
     if (changes.length) addHistory.run(job.id, 'receiving', `Qty updated: ${changes.join(', ')}`);
 
     if (isFullyReceived(updated)) {
-      db.prepare("UPDATE jobs SET stage = 'cutting', updated_at = datetime('now') WHERE id = ?").run(job.id);
-      addHistory.run(job.id, 'cutting', `Full qty received (${updated.qty_received}/${updated.qty_required}) — moved to Paper Cutting`);
+      const next = nextStage('receiving');
+      db.prepare("UPDATE jobs SET stage = ?, updated_at = datetime('now') WHERE id = ?").run(next, job.id);
+      addHistory.run(job.id, next, `Full qty received (${updated.qty_received}/${updated.qty_required}) — moved to ${stageLabel(next)}`);
     }
     res.json(present(loadJob(job.id), { withHistory: true }));
   });
@@ -165,7 +166,7 @@ export function createApp({ dataDir, uploadDir, publicDir }) {
   app.post('/api/jobs/:id/advance', (req, res) => {
     const job = loadJob(req.params.id);
     if (job.stage === 'receiving') {
-      throw new HttpError(409, 'Waiting for the full qty to be received before Paper Cutting can start');
+      throw new HttpError(409, 'Waiting for the full qty to be received before Paper Printing can start');
     }
     const next = nextStage(job.stage);
     if (!next) throw new HttpError(409, 'Job has already been dispatched');
