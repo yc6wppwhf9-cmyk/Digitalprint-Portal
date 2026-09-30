@@ -1,0 +1,20 @@
+{
+  "name": "digitalprint-portal",
+  "version": "1.0.0",
+  "description": "Digital print job tracker: design approval, quantity receiving, and production stages through to dispatch",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "express": "^5.2.1",
+    "multer": "^2.4.0"
+  }
+}
